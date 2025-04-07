@@ -9,20 +9,30 @@ export default function ModuleTwo() {
   const router = useRouter();
   const { moduleTwoAnswers, setModuleTwoAnswers } = useUnderstandMeContext();
 
-  const options = [
-    "Click the link immediately",
-    "Call the bank's official number",
-    "Ignore and delete the email",
-    "Forward to IT security team"
+  const options = ["Never", "Rarely", "Sometimes", "Often", "Always"];
+  
+  const questions = [
+    "I tend to make quick decisions when browsing online.",
+    "I generally trust emails from familiar organizations without verifying their authenticity.",
+    "I prefer sticking to familiar websites rather than exploring new ones.",
+    "I find it easy to persuade others to see things from my perspective.",
+    "I often seek out new online experiences and platforms."
   ];
 
-  const handleAnswer = (option) => {
-    setModuleTwoAnswers({ ...moduleTwoAnswers, q1: option });
+  const handleAnswer = (questionIndex, option) => {
+    setModuleTwoAnswers({
+      ...moduleTwoAnswers,
+      [`q${questionIndex + 1}`]: option
+    });
   };
 
   const handleNext = () => {
     router.push("/app/understand-me/module-three");
   };
+
+  const allQuestionsAnswered = questions.every((_, index) => 
+    moduleTwoAnswers[`q${index + 1}`]
+  );
 
   return (
     <SafeAreaWrapper>
@@ -32,53 +42,60 @@ export default function ModuleTwo() {
             <View style={styles.logoContainer}>
               <Shield size={24} color={Colors.primary} />
             </View>
-            <Text style={styles.headerTitle}>Phishing Susceptibility</Text>
+            <Text style={styles.headerTitle}>Personality-Based Assessment</Text>
           </View>
         </View>
 
-        <View style={styles.questionCard}>
-          <Text style={styles.questionTitle}>Scenario 1</Text>
-          <Text style={styles.question}>
-            You receive an email claiming your bank account is compromised. What would you do?
-          </Text>
-          
-          <View style={styles.optionsContainer}>
-            {options.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.option,
-                  moduleTwoAnswers.q1 === option && styles.selectedOption
-                ]}
-                onPress={() => handleAnswer(option)}
-              >
-                <Text style={[
-                  styles.optionText,
-                  moduleTwoAnswers.q1 === option && styles.selectedOptionText
-                ]}>
-                  {option}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {questions.map((question, index) => (
+          <View key={index} style={styles.questionCard}>
+            <Text style={styles.questionTitle}>Question {index + 6}</Text>
+            <Text style={styles.question}>
+              {question}
+            </Text>
+            
+            <View style={styles.optionsContainer}>
+              {options.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.option,
+                    moduleTwoAnswers[`q${index + 1}`] === option && styles.selectedOption
+                  ]}
+                  onPress={() => handleAnswer(index, option)}
+                >
+                  <Text style={[
+                    styles.optionText,
+                    moduleTwoAnswers[`q${index + 1}`] === option && styles.selectedOptionText
+                  ]}>
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        ))}
 
         <View style={styles.tipCard}>
-          <Text style={styles.tipTitle}>Security Tip</Text>
+          <Text style={styles.tipTitle}>Scoring Information</Text>
           <Text style={styles.tipText}>
-            Financial institutions will never ask you to click on links in emails to verify your account. Always contact your bank through official channels.
+            Your responses will be scored as follows:{'\n'}
+            Never: 1 point{'\n'}
+            Rarely: 2 points{'\n'}
+            Sometimes: 3 points{'\n'}
+            Often: 4 points{'\n'}
+            Always: 5 points
           </Text>
         </View>
 
         <TouchableOpacity
           style={[
             styles.nextButton,
-            !moduleTwoAnswers.q1 && styles.disabledButton
+            !allQuestionsAnswered && styles.disabledButton
           ]}
           onPress={handleNext}
-          disabled={!moduleTwoAnswers.q1}
+          disabled={!allQuestionsAnswered}
         >
-          <Text style={styles.nextButtonText}>Next Scenario</Text>
+          <Text style={styles.nextButtonText}>Next Module</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaWrapper>
@@ -135,7 +152,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   question: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: "bold",
     color: Colors.text,
     marginBottom: 20,

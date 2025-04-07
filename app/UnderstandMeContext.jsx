@@ -6,6 +6,7 @@ function UnderstandMeProvider({ children }) {
   const [moduleOneAnswers, setModuleOneAnswers] = useState({});
   const [moduleTwoAnswers, setModuleTwoAnswers] = useState({});
   const [moduleThreeAnswers, setModuleThreeAnswers] = useState({});
+  const [moduleFourAnswers, setModuleFourAnswers] = useState({});
 
   return (
     <UnderstandMeContext.Provider
@@ -16,6 +17,8 @@ function UnderstandMeProvider({ children }) {
         setModuleTwoAnswers,
         moduleThreeAnswers,
         setModuleThreeAnswers,
+        moduleFourAnswers,
+        setModuleFourAnswers,
       }}
     >
       {children}

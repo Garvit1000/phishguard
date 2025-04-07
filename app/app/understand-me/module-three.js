@@ -9,20 +9,30 @@ export default function ModuleThree() {
   const router = useRouter();
   const { moduleThreeAnswers, setModuleThreeAnswers } = useUnderstandMeContext();
 
-  const options = [
-    "Create a detailed plan and follow it",
-    "Work faster and longer hours",
-    "Seek help from colleagues",
-    "Push back on the deadline"
+  const options = ["Never", "Rarely", "Sometimes", "Often", "Always"];
+  
+  const questions = [
+    "I scrutinize email addresses and URLs before clicking on them.",
+    "I double-check the legitimacy of unexpected email attachments.",
+    "I prefer tasks that require careful analysis over those that are straightforward.",
+    "I can easily detect inconsistencies in online information.",
+    "I question the motives behind unsolicited online requests or offers."
   ];
 
-  const handleAnswer = (option) => {
-    setModuleThreeAnswers({ ...moduleThreeAnswers, q1: option });
+  const handleAnswer = (questionIndex, option) => {
+    setModuleThreeAnswers({
+      ...moduleThreeAnswers,
+      [`q${questionIndex + 1}`]: option
+    });
   };
 
   const handleNext = () => {
-    router.push("/app/understand-me/results");
+    router.push("/app/understand-me/module-four");
   };
+
+  const allQuestionsAnswered = questions.every((_, index) => 
+    moduleThreeAnswers[`q${index + 1}`]
+  );
 
   return (
     <SafeAreaWrapper>
@@ -32,53 +42,60 @@ export default function ModuleThree() {
             <View style={styles.logoContainer}>
               <Shield size={24} color={Colors.primary} />
             </View>
-            <Text style={styles.headerTitle}>Behavioral Assessment</Text>
+            <Text style={styles.headerTitle}>Cognitive Pattern Assessment</Text>
           </View>
         </View>
 
-        <View style={styles.questionCard}>
-          <Text style={styles.questionTitle}>Work Scenario</Text>
-          <Text style={styles.question}>
-            When faced with a tight deadline, what's your typical response?
-          </Text>
-          
-          <View style={styles.optionsContainer}>
-            {options.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.option,
-                  moduleThreeAnswers.q1 === option && styles.selectedOption
-                ]}
-                onPress={() => handleAnswer(option)}
-              >
-                <Text style={[
-                  styles.optionText,
-                  moduleThreeAnswers.q1 === option && styles.selectedOptionText
-                ]}>
-                  {option}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {questions.map((question, index) => (
+          <View key={index} style={styles.questionCard}>
+            <Text style={styles.questionTitle}>Question {index + 11}</Text>
+            <Text style={styles.question}>
+              {question}
+            </Text>
+            
+            <View style={styles.optionsContainer}>
+              {options.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.option,
+                    moduleThreeAnswers[`q${index + 1}`] === option && styles.selectedOption
+                  ]}
+                  onPress={() => handleAnswer(index, option)}
+                >
+                  <Text style={[
+                    styles.optionText,
+                    moduleThreeAnswers[`q${index + 1}`] === option && styles.selectedOptionText
+                  ]}>
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        ))}
 
         <View style={styles.tipCard}>
-          <Text style={styles.tipTitle}>Why This Matters</Text>
+          <Text style={styles.tipTitle}>Scoring Information</Text>
           <Text style={styles.tipText}>
-            Your response to pressure can indicate how you might react to urgent phishing attempts that create artificial time pressure to make you act quickly.
+            Your responses will be scored as follows:{'\n'}
+            Never: 1 point{'\n'}
+            Rarely: 2 points{'\n'}
+            Sometimes: 3 points{'\n'}
+            Often: 4 points{'\n'}
+            Always: 5 points
           </Text>
         </View>
 
         <TouchableOpacity
           style={[
             styles.nextButton,
-            !moduleThreeAnswers.q1 && styles.disabledButton
+            !allQuestionsAnswered && styles.disabledButton
           ]}
           onPress={handleNext}
-          disabled={!moduleThreeAnswers.q1}
+          disabled={!allQuestionsAnswered}
         >
-          <Text style={styles.nextButtonText}>View Results</Text>
+          <Text style={styles.nextButtonText}>Next Module</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaWrapper>
@@ -135,7 +152,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   question: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: "bold",
     color: Colors.text,
     marginBottom: 20,

@@ -9,15 +9,30 @@ export default function ModuleOne() {
   const router = useRouter();
   const { moduleOneAnswers, setModuleOneAnswers } = useUnderstandMeContext();
 
-  const options = ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"];
+  const options = ["Never", "Rarely", "Sometimes", "Often", "Always"];
+  
+  const questions = [
+    "I enjoy exploring new technologies and applications.",
+    "When uncertain about an email's authenticity, I consult with colleagues or friends.",
+    "I actively participate in discussions about online security and privacy.",
+    "Building trust with online contacts is important to me.",
+    "I often share articles or information about cybersecurity with others."
+  ];
 
-  const handleAnswer = (option) => {
-    setModuleOneAnswers({ ...moduleOneAnswers, q1: option });
+  const handleAnswer = (questionIndex, option) => {
+    setModuleOneAnswers({
+      ...moduleOneAnswers,
+      [`q${questionIndex + 1}`]: option
+    });
   };
 
   const handleNext = () => {
     router.push("/app/understand-me/module-two");
   };
+
+  const allQuestionsAnswered = questions.every((_, index) => 
+    moduleOneAnswers[`q${index + 1}`]
+  );
 
   return (
     <SafeAreaWrapper>
@@ -27,53 +42,60 @@ export default function ModuleOne() {
             <View style={styles.logoContainer}>
               <Shield size={24} color={Colors.primary} />
             </View>
-            <Text style={styles.headerTitle}>Personality Assessment</Text>
+            <Text style={styles.headerTitle}>Report-Building Assessment</Text>
           </View>
         </View>
 
-        <View style={styles.questionCard}>
-          <Text style={styles.questionTitle}>Question 1</Text>
-          <Text style={styles.question}>
-            I enjoy meeting new people.
-          </Text>
-          
-          <View style={styles.optionsContainer}>
-            {options.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.option,
-                  moduleOneAnswers.q1 === option && styles.selectedOption
-                ]}
-                onPress={() => handleAnswer(option)}
-              >
-                <Text style={[
-                  styles.optionText,
-                  moduleOneAnswers.q1 === option && styles.selectedOptionText
-                ]}>
-                  {option}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {questions.map((question, index) => (
+          <View key={index} style={styles.questionCard}>
+            <Text style={styles.questionTitle}>Question {index + 1}</Text>
+            <Text style={styles.question}>
+              {question}
+            </Text>
+            
+            <View style={styles.optionsContainer}>
+              {options.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.option,
+                    moduleOneAnswers[`q${index + 1}`] === option && styles.selectedOption
+                  ]}
+                  onPress={() => handleAnswer(index, option)}
+                >
+                  <Text style={[
+                    styles.optionText,
+                    moduleOneAnswers[`q${index + 1}`] === option && styles.selectedOptionText
+                  ]}>
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        ))}
 
         <View style={styles.tipCard}>
-          <Text style={styles.tipTitle}>Why This Matters</Text>
+          <Text style={styles.tipTitle}>Scoring Information</Text>
           <Text style={styles.tipText}>
-            Understanding your personality traits helps us assess how you might interact with potential phishing attempts and customize our security recommendations.
+            Your responses will be scored as follows:{'\n'}
+            Never: 1 point{'\n'}
+            Rarely: 2 points{'\n'}
+            Sometimes: 3 points{'\n'}
+            Often: 4 points{'\n'}
+            Always: 5 points
           </Text>
         </View>
 
         <TouchableOpacity
           style={[
             styles.nextButton,
-            !moduleOneAnswers.q1 && styles.disabledButton
+            !allQuestionsAnswered && styles.disabledButton
           ]}
           onPress={handleNext}
-          disabled={!moduleOneAnswers.q1}
+          disabled={!allQuestionsAnswered}
         >
-          <Text style={styles.nextButtonText}>Next Question</Text>
+          <Text style={styles.nextButtonText}>Next Module</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaWrapper>
@@ -130,7 +152,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   question: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: "bold",
     color: Colors.text,
     marginBottom: 20,

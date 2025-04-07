@@ -9,77 +9,77 @@ export default function Results() {
   const {
     moduleOneAnswers,
     moduleTwoAnswers,
-    moduleThreeAnswers
+    moduleThreeAnswers,
+    moduleFourAnswers
   } = useUnderstandMeContext();
 
-  const calculatePersonalityScore = () => {
-    if (!moduleOneAnswers.q1) return 0;
-    const scores = {
-      "Strongly Agree": 100,
-      "Agree": 75,
-      "Neutral": 50,
-      "Disagree": 25,
-      "Strongly Disagree": 0
-    };
-    return scores[moduleOneAnswers.q1] || 0;
+  const convertToPercentage = (score) => (score - 1) * 20;
+
+  const calculateModuleScore = (answers, isRiskModule = false) => {
+    if (!answers || Object.keys(answers).length === 0) return 0;
+    
+    const pointValues = isRiskModule ? 
+      { "Never": 5, "Rarely": 4, "Sometimes": 3, "Often": 2, "Always": 1 } :
+      { "Never": 1, "Rarely": 2, "Sometimes": 3, "Often": 4, "Always": 5 };
+
+    const scores = Object.values(answers).map(answer => pointValues[answer] || 0);
+    const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+    return convertToPercentage(averageScore);
   };
 
-  const calculatePhishingScore = () => {
-    if (!moduleTwoAnswers.q1) return 0;
-    const scores = {
-      "Call the bank's official number": 100,
-      "Forward to IT security team": 75,
-      "Ignore and delete the email": 50,
-      "Click the link immediately": 0
-    };
-    return scores[moduleTwoAnswers.q1] || 0;
+  const moduleScores = {
+    "Rapport Building": calculateModuleScore(moduleOneAnswers),
+    "Personality": calculateModuleScore(moduleTwoAnswers),
+    "Cognitive Pattern": calculateModuleScore(moduleThreeAnswers),
+    "Risk Assessment": calculateModuleScore(moduleFourAnswers, true)
   };
 
-  const calculateBehaviorScore = () => {
-    if (!moduleThreeAnswers.q1) return 0;
-    const scores = {
-      "Create a detailed plan and follow it": 100,
-      "Seek help from colleagues": 75,
-      "Push back on the deadline": 50,
-      "Work faster and longer hours": 25
-    };
-    return scores[moduleThreeAnswers.q1] || 0;
+  const getScoreColor = (score) => {
+    if (score >= 80) return '#2E7D32';
+    if (score >= 64) return '#4CAF50';
+    if (score >= 32) return '#FFA500';
+    return '#FF4B4B';
   };
 
-  const scores = {
-    Personality: calculatePersonalityScore(),
-    Phishing: calculatePhishingScore(),
-    Behavior: calculateBehaviorScore()
-  };
+  const scoreEntries = Object.entries(moduleScores).map(([category, score]) => ({
+    category,
+    score,
+    color: getScoreColor(score)
+  }));
 
   const data = {
-    labels: ["Personality", "Phishing", "Behavior"],
+    labels: scoreEntries.map(entry => entry.category),
     datasets: [{
-      data: [scores.Personality, scores.Phishing, scores.Behavior],
-      color: () => Colors.primary,
-    }],
+      data: scoreEntries.map(entry => entry.score)
+    }]
   };
 
-  const getOverallAssessment = () => {
-    const avgScore = (scores.Personality + scores.Phishing + scores.Behavior) / 3;
-    if (avgScore >= 75) return {
-      icon: <Star size={24} color={Colors.success} />,
-      text: "Excellent understanding of security practices!",
-      color: Colors.success
+  const avgScore = Object.values(moduleScores).reduce((sum, score) => sum + score, 0) / Object.keys(moduleScores).length;
+
+  const getOverallAssessment = (score) => {
+    if (score >= 80) return {
+      icon: <Star size={24} color="#2E7D32" />,
+      text: "Excellent security awareness! You demonstrate exceptional understanding of cybersecurity best practices and risk management.",
+      color: "#2E7D32"
     };
-    if (avgScore >= 50) return {
-      icon: <CheckCircle size={24} color={Colors.primary} />,
-      text: "Good awareness, but room for improvement.",
-      color: Colors.primary
+    if (score >= 64) return {
+      icon: <CheckCircle size={24} color="#4CAF50" />,
+      text: "Good security awareness! You show solid understanding, with some room for improvement in specific areas.",
+      color: "#4CAF50"
+    };
+    if (score >= 32) return {
+      icon: <AlertTriangle size={24} color="#FFA500" />,
+      text: "Moderate security awareness. Consider strengthening your security practices in areas with lower scores.",
+      color: "#FFA500"
     };
     return {
-      icon: <AlertTriangle size={24} color={Colors.warning} />,
-      text: "Consider reviewing basic security practices.",
-      color: Colors.warning
+      icon: <AlertTriangle size={24} color="#FF4B4B" />,
+      text: "Your security awareness needs immediate attention. Focus on developing safer online behaviors and review basic security practices.",
+      color: "#FF4B4B"
     };
   };
 
-  const assessment = getOverallAssessment();
+  const assessment = getOverallAssessment(avgScore);
 
   return (
     <SafeAreaWrapper>
@@ -107,16 +107,34 @@ export default function Results() {
                   backgroundGradientFrom: '#ffffff',
                   backgroundGradientTo: '#ffffff',
                   decimalPlaces: 0,
-                  color: () => Colors.primary,
+                  color: (opacity = 1, index) => {
+                    const scoreEntry = scoreEntries[index];
+                    const color = scoreEntry ? scoreEntry.color : '#000000';
+                    const r = parseInt(color.slice(1, 3), 16);
+                    const g = parseInt(color.slice(3, 5), 16);
+                    const b = parseInt(color.slice(5, 7), 16);
+                    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+                  },
                   labelColor: () => Colors.text,
-                  barPercentage: 0.7,
-                  useShadowColorFromDataset: false,
+                  barPercentage: 0.6,
+                  propsForBackgroundLines: {
+                    strokeWidth: 1,
+                    strokeDasharray: '',
+                  },
+                  propsForVerticalLabels: {
+                    fontSize: 12,
+                  },
+                  count: 6,
                 }}
-                style={styles.chart}
-                withInnerLines={false}
-                showBarTops={false}
-                fromZero
+                style={[styles.chart, {
+                  marginVertical: 8,
+                  borderRadius: 16,
+                }]}
+                withInnerLines={true}
+                showBarTops={true}
+                fromZero={true}
                 segments={5}
+                maxValue={100}
               />
             </View>
           </View>
@@ -124,23 +142,18 @@ export default function Results() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Detailed Scores</Text>
-          {Object.entries(scores).map(([category, score]) => {
-            const indicatorColor = score >= 75 ? Colors.success :
-                                 score >= 50 ? Colors.primary :
-                                 Colors.warning;
-            return (
-              <View key={category} style={styles.scoreItem}>
-                <Text style={styles.scoreCategory}>{category}</Text>
-                <View style={styles.scoreValueContainer}>
-                  <View style={[styles.scoreIndicator, { backgroundColor: indicatorColor }]} />
-                  <Text style={[styles.scoreValue, { color: indicatorColor }]}>{score}%</Text>
-                </View>
+          {scoreEntries.map(({ category, score, color }) => (
+            <View key={category} style={styles.scoreItem}>
+              <Text style={styles.scoreCategory}>{category}</Text>
+              <View style={styles.scoreValueContainer}>
+                <View style={[styles.scoreIndicator, { backgroundColor: color }]} />
+                <Text style={[styles.scoreValue, { color: color }]}>{Math.round(score)}%</Text>
               </View>
-            );
-          })}
+            </View>
+          ))}
         </View>
 
-        <View style={[styles.card, { borderLeftColor: assessment.color }]}>
+        <View style={[styles.card, { borderLeftColor: assessment.color, borderLeftWidth: 4 }]}>
           <View style={styles.assessmentHeader}>
             {assessment.icon}
             <Text style={styles.assessmentTitle}>Overall Assessment</Text>
@@ -227,6 +240,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.text,
     fontWeight: "500",
+    flex: 1,
+    marginRight: 16,
   },
   scoreValueContainer: {
     flexDirection: 'row',
@@ -240,7 +255,6 @@ const styles = StyleSheet.create({
   },
   scoreValue: {
     fontSize: 16,
-    color: Colors.primary,
     fontWeight: "bold",
   },
   assessmentHeader: {
