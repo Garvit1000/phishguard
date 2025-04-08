@@ -1,23 +1,55 @@
 import { useRouter } from "expo-router";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useUnderstandMeContext } from "../../UnderstandMeContext.jsx";
+import { useEffect } from "react";
 import Colors from "../../../constants/colors";
 import SafeAreaWrapper from "../../../components/layouts/SafeAreaWrapper";
 import { Shield } from "lucide-react-native";
 
 export default function ModuleThree() {
   const router = useRouter();
-  const { moduleThreeAnswers, setModuleThreeAnswers } = useUnderstandMeContext();
+  const { moduleThreeAnswers, setModuleThreeAnswers, setCurrentModule, moduleThreeQuestions, setModuleThreeQuestions } = useUnderstandMeContext();
+
+  useEffect(() => {
+    // Enable screenshot prevention for this module
+    setCurrentModule("module-three");
+
+    // Cleanup when component unmounts
+    return () => {
+      setCurrentModule(null);
+    };
+  }, [setCurrentModule]);
 
   const options = ["Never", "Rarely", "Sometimes", "Often", "Always"];
   
-  const questions = [
+  const QUESTION_POOL = [
+    // Existing questions
     "I scrutinize email addresses and URLs before clicking on them.",
     "I double-check the legitimacy of unexpected email attachments.",
     "I prefer tasks that require careful analysis over those that are straightforward.",
     "I can easily detect inconsistencies in online information.",
-    "I question the motives behind unsolicited online requests or offers."
+    "I question the motives behind unsolicited online requests or offers.",
+    // New questions
+    "I meticulously verify the authenticity of emails claiming to be from official organizations.",
+    "I cross-reference information from unsolicited messages with official sources before taking action.",
+    "I pay attention to subtle discrepancies in email addresses or domain names.",
+    "I am cautious about downloading attachments from unknown or unexpected emails.",
+    "I recognize that legitimate organizations will not request sensitive information via unsecured channels.",
+    "I am aware of the common tactics used in phishing scams, such as creating a sense of urgency.",
+    "I regularly update and patch my devices to protect against known vulnerabilities.",
+    "I understand the importance of using multi-factor authentication for online accounts.",
+    "I can identify signs of secure websites, such as HTTPS and valid security certificates.",
+    "I am skeptical of unsolicited messages that request immediate action or personal information."
   ];
+
+  // Select random questions if not already selected
+  useEffect(() => {
+    if (moduleThreeQuestions.length === 0) {
+      const indices = [...Array(QUESTION_POOL.length).keys()];
+      const randomIndices = indices.sort(() => Math.random() - 0.5).slice(0, 5);
+      setModuleThreeQuestions(randomIndices.map(i => QUESTION_POOL[i]));
+    }
+  }, [moduleThreeQuestions, setModuleThreeQuestions]);
 
   const handleAnswer = (questionIndex, option) => {
     setModuleThreeAnswers({
@@ -30,7 +62,7 @@ export default function ModuleThree() {
     router.push("/app/understand-me/module-four");
   };
 
-  const allQuestionsAnswered = questions.every((_, index) => 
+  const allQuestionsAnswered = moduleThreeQuestions.every((_, index) =>
     moduleThreeAnswers[`q${index + 1}`]
   );
 
@@ -46,7 +78,7 @@ export default function ModuleThree() {
           </View>
         </View>
 
-        {questions.map((question, index) => (
+        {moduleThreeQuestions.map((question, index) => (
           <View key={index} style={styles.questionCard}>
             <Text style={styles.questionTitle}>Question {index + 11}</Text>
             <Text style={styles.question}>
@@ -75,17 +107,6 @@ export default function ModuleThree() {
           </View>
         ))}
 
-        <View style={styles.tipCard}>
-          <Text style={styles.tipTitle}>Scoring Information</Text>
-          <Text style={styles.tipText}>
-            Your responses will be scored as follows:{'\n'}
-            Never: 1 point{'\n'}
-            Rarely: 2 points{'\n'}
-            Sometimes: 3 points{'\n'}
-            Often: 4 points{'\n'}
-            Always: 5 points
-          </Text>
-        </View>
 
         <TouchableOpacity
           style={[
@@ -180,25 +201,6 @@ const styles = StyleSheet.create({
   selectedOptionText: {
     color: Colors.white,
     fontWeight: '600',
-  },
-  tipCard: {
-    backgroundColor: Colors.lightGray,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
-  },
-  tipTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  tipText: {
-    fontSize: 14,
-    color: Colors.darkGray,
-    lineHeight: 20,
   },
   nextButton: {
     backgroundColor: Colors.primary,

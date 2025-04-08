@@ -4,6 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { useAuthStore } from "../stores/auth-store";
 import { ErrorBoundary } from "./error-boundry";
+import { ScreenshotPreventionProvider } from "./ScreenshotPreventionContext";
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -32,7 +33,9 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <RootLayoutNav />
+      <ScreenshotPreventionProvider>
+        <RootLayoutNav />
+      </ScreenshotPreventionProvider>
     </ErrorBoundary>
   );
 }

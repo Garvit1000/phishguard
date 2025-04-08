@@ -1,17 +1,29 @@
-import { View, Text, Dimensions, StyleSheet, ScrollView } from "react-native";
+import { View, Text, Dimensions, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { BarChart } from "react-native-chart-kit";
 import { useUnderstandMeContext } from "../../UnderstandMeContext.jsx";
+import { useEffect, useState } from "react";
 import Colors from "../../../constants/colors";
 import SafeAreaWrapper from "../../../components/layouts/SafeAreaWrapper";
-import { Shield, Star, AlertTriangle, CheckCircle } from "lucide-react-native";
+import { Shield, Star, AlertTriangle, CheckCircle, Download, Home } from "lucide-react-native";
+import * as Haptics from 'expo-haptics';
+import PDFGenerationService from "../../../services/PDFGenerationService";
 
 export default function Results() {
+  const navigation = useNavigation();
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const {
     moduleOneAnswers,
     moduleTwoAnswers,
     moduleThreeAnswers,
-    moduleFourAnswers
+    moduleFourAnswers,
+    setCurrentModule
   } = useUnderstandMeContext();
+
+  useEffect(() => {
+    // Explicitly disable screenshot prevention for results page
+    setCurrentModule(null);
+  }, [setCurrentModule]);
 
   const convertToPercentage = (score) => (score - 1) * 20;
 
@@ -28,10 +40,10 @@ export default function Results() {
   };
 
   const moduleScores = {
-    "Rapport Building": calculateModuleScore(moduleOneAnswers),
-    "Personality": calculateModuleScore(moduleTwoAnswers),
-    "Cognitive Pattern": calculateModuleScore(moduleThreeAnswers),
-    "Risk Assessment": calculateModuleScore(moduleFourAnswers, true)
+    "Report": calculateModuleScore(moduleOneAnswers),
+    "Behavior": calculateModuleScore(moduleTwoAnswers),
+    "Cognition": calculateModuleScore(moduleThreeAnswers),
+    "Risk": calculateModuleScore(moduleFourAnswers, true)
   };
 
   const getScoreColor = (score) => {
@@ -81,6 +93,27 @@ export default function Results() {
 
   const assessment = getOverallAssessment(avgScore);
 
+  const handleGenerateReport = async () => {
+    try {
+      setIsGeneratingPDF(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      const reportData = {
+        moduleScores,
+        avgScore,
+        assessment
+      };
+
+      const filePath = await PDFGenerationService.generatePDF(reportData);
+      await PDFGenerationService.sharePDF(filePath);
+    } catch (error) {
+      console.error('Error generating report:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   return (
     <SafeAreaWrapper>
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -90,6 +123,15 @@ export default function Results() {
               <Shield size={24} color={Colors.primary} />
             </View>
             <Text style={styles.headerTitle}>Assessment Results</Text>
+            <TouchableOpacity
+              style={styles.homeButton}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                navigation.navigate('landing');
+              }}
+            >
+              <Home size={24} color={Colors.primary} />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -100,7 +142,7 @@ export default function Results() {
               <BarChart
                 data={data}
                 width={Dimensions.get("window").width - 80}
-                height={220}
+                height={240}
                 yAxisSuffix="%"
                 chartConfig={{
                   backgroundColor: '#ffffff',
@@ -116,7 +158,7 @@ export default function Results() {
                     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
                   },
                   labelColor: () => Colors.text,
-                  barPercentage: 0.6,
+                  barPercentage: 0.7,
                   propsForBackgroundLines: {
                     strokeWidth: 1,
                     strokeDasharray: '',
@@ -124,11 +166,16 @@ export default function Results() {
                   propsForVerticalLabels: {
                     fontSize: 12,
                   },
+                  propsForHorizontalLabels: {
+                    fontSize: 13,
+                    fontWeight: '600',
+                  },
                   count: 6,
                 }}
                 style={[styles.chart, {
                   marginVertical: 8,
                   borderRadius: 16,
+                  paddingBottom: 8,
                 }]}
                 withInnerLines={true}
                 showBarTops={true}
@@ -160,6 +207,23 @@ export default function Results() {
           </View>
           <Text style={styles.assessmentText}>{assessment.text}</Text>
         </View>
+
+        <TouchableOpacity
+          style={[styles.downloadButton, isGeneratingPDF && styles.disabledButton]}
+          onPress={handleGenerateReport}
+          disabled={isGeneratingPDF}
+        >
+          <View style={styles.downloadButtonContent}>
+            {isGeneratingPDF ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <>
+                <Download size={20} color={Colors.white} />
+                <Text style={styles.downloadButtonText}>Download Report</Text>
+              </>
+            )}
+          </View>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaWrapper>
   );
@@ -179,6 +243,7 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   logoContainer: {
     width: 40,
@@ -193,6 +258,17 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: Colors.text,
+    flex: 1,
+    marginLeft: 12,
+  },
+  homeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.lightGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
   },
   card: {
     backgroundColor: Colors.white,
@@ -218,6 +294,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 8,
+    paddingBottom: 12,
   },
   chart: {
     borderRadius: 16,
@@ -252,6 +329,27 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     marginRight: 8,
+  },
+  downloadButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  downloadButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  downloadButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+  disabledButton: {
+    backgroundColor: Colors.grey,
   },
   scoreValue: {
     fontSize: 16,

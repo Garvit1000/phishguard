@@ -1,23 +1,55 @@
 import { useRouter } from "expo-router";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useUnderstandMeContext } from "../../UnderstandMeContext.jsx";
+import { useEffect } from "react";
 import Colors from "../../../constants/colors";
 import SafeAreaWrapper from "../../../components/layouts/SafeAreaWrapper";
 import { Shield } from "lucide-react-native";
 
 export default function ModuleTwo() {
   const router = useRouter();
-  const { moduleTwoAnswers, setModuleTwoAnswers } = useUnderstandMeContext();
+  const { moduleTwoAnswers, setModuleTwoAnswers, setCurrentModule, moduleTwoQuestions, setModuleTwoQuestions } = useUnderstandMeContext();
+
+  useEffect(() => {
+    // Enable screenshot prevention for this module
+    setCurrentModule("module-two");
+
+    // Cleanup when component unmounts
+    return () => {
+      setCurrentModule(null);
+    };
+  }, [setCurrentModule]);
 
   const options = ["Never", "Rarely", "Sometimes", "Often", "Always"];
   
-  const questions = [
+  const QUESTION_POOL = [
+    // Existing questions
     "I tend to make quick decisions when browsing online.",
     "I generally trust emails from familiar organizations without verifying their authenticity.",
     "I prefer sticking to familiar websites rather than exploring new ones.",
     "I find it easy to persuade others to see things from my perspective.",
-    "I often seek out new online experiences and platforms."
+    "I often seek out new online experiences and platforms.",
+    // New questions
+    "I often act on emails that create a sense of urgency without verifying their authenticity.",
+    "I tend to trust messages from unknown senders if they appear professional.",
+    "I am more likely to engage with online offers that promise significant rewards with minimal effort.",
+    "I believe that most online threats are exaggerated and do not require much attention.",
+    "I prefer convenience over security when setting up online accounts or devices.",
+    "I rarely question the legitimacy of unexpected online communications.",
+    "I feel confident in my ability to identify scams without formal training.",
+    "I often share personal achievements or purchases on social media without considering privacy settings.",
+    "I believe that cybersecurity measures are more relevant for organizations than individuals.",
+    "I am comfortable using the same password across multiple online platforms for ease of access."
   ];
+
+  // Select random questions if not already selected
+  useEffect(() => {
+    if (moduleTwoQuestions.length === 0) {
+      const indices = [...Array(QUESTION_POOL.length).keys()];
+      const randomIndices = indices.sort(() => Math.random() - 0.5).slice(0, 5);
+      setModuleTwoQuestions(randomIndices.map(i => QUESTION_POOL[i]));
+    }
+  }, [moduleTwoQuestions, setModuleTwoQuestions]);
 
   const handleAnswer = (questionIndex, option) => {
     setModuleTwoAnswers({
@@ -30,7 +62,7 @@ export default function ModuleTwo() {
     router.push("/app/understand-me/module-three");
   };
 
-  const allQuestionsAnswered = questions.every((_, index) => 
+  const allQuestionsAnswered = moduleTwoQuestions.every((_, index) =>
     moduleTwoAnswers[`q${index + 1}`]
   );
 
@@ -46,7 +78,7 @@ export default function ModuleTwo() {
           </View>
         </View>
 
-        {questions.map((question, index) => (
+        {moduleTwoQuestions.map((question, index) => (
           <View key={index} style={styles.questionCard}>
             <Text style={styles.questionTitle}>Question {index + 6}</Text>
             <Text style={styles.question}>
@@ -75,17 +107,6 @@ export default function ModuleTwo() {
           </View>
         ))}
 
-        <View style={styles.tipCard}>
-          <Text style={styles.tipTitle}>Scoring Information</Text>
-          <Text style={styles.tipText}>
-            Your responses will be scored as follows:{'\n'}
-            Never: 1 point{'\n'}
-            Rarely: 2 points{'\n'}
-            Sometimes: 3 points{'\n'}
-            Often: 4 points{'\n'}
-            Always: 5 points
-          </Text>
-        </View>
 
         <TouchableOpacity
           style={[
@@ -180,25 +201,6 @@ const styles = StyleSheet.create({
   selectedOptionText: {
     color: Colors.white,
     fontWeight: '600',
-  },
-  tipCard: {
-    backgroundColor: Colors.lightGray,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
-  },
-  tipTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  tipText: {
-    fontSize: 14,
-    color: Colors.darkGray,
-    lineHeight: 20,
   },
   nextButton: {
     backgroundColor: Colors.primary,

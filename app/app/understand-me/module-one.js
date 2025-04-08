@@ -1,23 +1,55 @@
 import { useRouter } from "expo-router";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useUnderstandMeContext } from "../../UnderstandMeContext.jsx";
+import { useEffect } from "react";
 import Colors from "../../../constants/colors";
 import SafeAreaWrapper from "../../../components/layouts/SafeAreaWrapper";
 import { Shield } from "lucide-react-native";
 
 export default function ModuleOne() {
   const router = useRouter();
-  const { moduleOneAnswers, setModuleOneAnswers } = useUnderstandMeContext();
+  const { moduleOneAnswers, setModuleOneAnswers, setCurrentModule, moduleOneQuestions, setModuleOneQuestions } = useUnderstandMeContext();
+
+  useEffect(() => {
+    // Enable screenshot prevention for this module
+    setCurrentModule("module-one");
+
+    // Cleanup when component unmounts
+    return () => {
+      setCurrentModule(null);
+    };
+  }, [setCurrentModule]);
 
   const options = ["Never", "Rarely", "Sometimes", "Often", "Always"];
   
-  const questions = [
+  const QUESTION_POOL = [
+    // Existing questions
     "I enjoy exploring new technologies and applications.",
     "When uncertain about an email's authenticity, I consult with colleagues or friends.",
     "I actively participate in discussions about online security and privacy.",
     "Building trust with online contacts is important to me.",
-    "I often share articles or information about cybersecurity with others."
+    "I often share articles or information about cybersecurity with others.",
+    // New questions
+    "I frequently discuss online security practices with friends or family.",
+    "I feel comfortable sharing my online experiences, including mistakes, to help others learn.",
+    "I actively seek advice from colleagues or peers when encountering unfamiliar online situations.",
+    "I participate in community forums or groups focused on cybersecurity awareness.",
+    "I believe that sharing knowledge about online threats can help in preventing scams.",
+    "I encourage others to report suspicious online activities to relevant authorities.",
+    "I stay updated with the latest news on cybersecurity incidents and threats.",
+    "I have attended workshops or seminars on online safety and cybersecurity.",
+    "I collaborate with others to understand and mitigate potential online risks.",
+    "I believe that open conversations about online vulnerabilities can lead to better protection strategies."
   ];
+
+  // Select random questions if not already selected
+  useEffect(() => {
+    if (moduleOneQuestions.length === 0) {
+      const indices = [...Array(QUESTION_POOL.length).keys()];
+      const randomIndices = indices.sort(() => Math.random() - 0.5).slice(0, 5);
+      setModuleOneQuestions(randomIndices.map(i => QUESTION_POOL[i]));
+    }
+  }, [moduleOneQuestions, setModuleOneQuestions]);
 
   const handleAnswer = (questionIndex, option) => {
     setModuleOneAnswers({
@@ -30,7 +62,7 @@ export default function ModuleOne() {
     router.push("/app/understand-me/module-two");
   };
 
-  const allQuestionsAnswered = questions.every((_, index) => 
+  const allQuestionsAnswered = moduleOneQuestions.every((_, index) =>
     moduleOneAnswers[`q${index + 1}`]
   );
 
@@ -46,7 +78,7 @@ export default function ModuleOne() {
           </View>
         </View>
 
-        {questions.map((question, index) => (
+        {moduleOneQuestions.map((question, index) => (
           <View key={index} style={styles.questionCard}>
             <Text style={styles.questionTitle}>Question {index + 1}</Text>
             <Text style={styles.question}>
@@ -75,17 +107,6 @@ export default function ModuleOne() {
           </View>
         ))}
 
-        <View style={styles.tipCard}>
-          <Text style={styles.tipTitle}>Scoring Information</Text>
-          <Text style={styles.tipText}>
-            Your responses will be scored as follows:{'\n'}
-            Never: 1 point{'\n'}
-            Rarely: 2 points{'\n'}
-            Sometimes: 3 points{'\n'}
-            Often: 4 points{'\n'}
-            Always: 5 points
-          </Text>
-        </View>
 
         <TouchableOpacity
           style={[
@@ -180,25 +201,6 @@ const styles = StyleSheet.create({
   selectedOptionText: {
     color: Colors.white,
     fontWeight: '600',
-  },
-  tipCard: {
-    backgroundColor: Colors.lightGray,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
-  },
-  tipTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  tipText: {
-    fontSize: 14,
-    color: Colors.darkGray,
-    lineHeight: 20,
   },
   nextButton: {
     backgroundColor: Colors.primary,

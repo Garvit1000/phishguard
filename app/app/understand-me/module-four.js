@@ -1,23 +1,55 @@
 import { useRouter } from "expo-router";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useUnderstandMeContext } from "../../UnderstandMeContext.jsx";
+import { useEffect } from "react";
 import Colors from "../../../constants/colors";
 import SafeAreaWrapper from "../../../components/layouts/SafeAreaWrapper";
 import { Shield } from "lucide-react-native";
 
 export default function ModuleFour() {
   const router = useRouter();
-  const { moduleFourAnswers, setModuleFourAnswers } = useUnderstandMeContext();
+  const { moduleFourAnswers, setModuleFourAnswers, setCurrentModule, moduleFourQuestions, setModuleFourQuestions } = useUnderstandMeContext();
+
+  useEffect(() => {
+    // Enable screenshot prevention for this module
+    setCurrentModule("module-four");
+
+    // Cleanup when component unmounts
+    return () => {
+      setCurrentModule(null);
+    };
+  }, [setCurrentModule]);
 
   const options = ["Never", "Rarely", "Sometimes", "Often", "Always"];
   
-  const questions = [
+  const QUESTION_POOL = [
+    // Existing questions
     "I enjoy taking risks, even if there's potential for negative outcomes.",
     "I have, at times, bypassed security protocols for convenience.",
     "I am comfortable sharing personal information on websites that offer value.",
     "I have engaged in online activities that others might consider risky.",
-    "I believe that taking chances online is sometimes necessary to achieve goals."
+    "I believe that taking chances online is sometimes necessary to achieve goals.",
+    // New questions
+    "I have clicked on links in emails without verifying their source.",
+    "I have provided personal information on websites without checking their legitimacy.",
+    "I have engaged in online transactions over public Wi-Fi networks without using a VPN.",
+    "I have ignored browser warnings about potentially unsafe websites.",
+    "I have used the same password for multiple sensitive accounts.",
+    "I have downloaded software or apps from unofficial or unverified sources.",
+    "I have shared sensitive information over the phone without confirming the caller's identity.",
+    "I have bypassed security protocols at work or school for convenience.",
+    "I have responded to online offers that seemed too good to be true.",
+    "I have neglected to log out from shared or public computers after accessing personal accounts."
   ];
+
+  // Select random questions if not already selected
+  useEffect(() => {
+    if (moduleFourQuestions.length === 0) {
+      const indices = [...Array(QUESTION_POOL.length).keys()];
+      const randomIndices = indices.sort(() => Math.random() - 0.5).slice(0, 5);
+      setModuleFourQuestions(randomIndices.map(i => QUESTION_POOL[i]));
+    }
+  }, [moduleFourQuestions, setModuleFourQuestions]);
 
   const handleAnswer = (questionIndex, option) => {
     setModuleFourAnswers({
@@ -30,7 +62,7 @@ export default function ModuleFour() {
     router.push("/app/understand-me/results");
   };
 
-  const allQuestionsAnswered = questions.every((_, index) => 
+  const allQuestionsAnswered = moduleFourQuestions.every((_, index) =>
     moduleFourAnswers[`q${index + 1}`]
   );
 
@@ -46,7 +78,7 @@ export default function ModuleFour() {
           </View>
         </View>
 
-        {questions.map((question, index) => (
+        {moduleFourQuestions.map((question, index) => (
           <View key={index} style={styles.questionCard}>
             <Text style={styles.questionTitle}>Question {index + 16}</Text>
             <Text style={styles.question}>
@@ -75,17 +107,6 @@ export default function ModuleFour() {
           </View>
         ))}
 
-        <View style={styles.tipCard}>
-          <Text style={styles.tipTitle}>Scoring Information</Text>
-          <Text style={styles.tipText}>
-            Your responses will be scored as follows:{'\n'}
-            Never: 1 point{'\n'}
-            Rarely: 2 points{'\n'}
-            Sometimes: 3 points{'\n'}
-            Often: 4 points{'\n'}
-            Always: 5 points
-          </Text>
-        </View>
 
         <TouchableOpacity
           style={[
@@ -180,25 +201,6 @@ const styles = StyleSheet.create({
   selectedOptionText: {
     color: Colors.white,
     fontWeight: '600',
-  },
-  tipCard: {
-    backgroundColor: Colors.lightGray,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
-  },
-  tipTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  tipText: {
-    fontSize: 14,
-    color: Colors.darkGray,
-    lineHeight: 20,
   },
   nextButton: {
     backgroundColor: Colors.primary,
