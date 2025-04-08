@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { auth } from '../config/firebase';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile
+} from 'firebase/auth';
 
 export const useAuthStore = create()(
   persist(
@@ -10,18 +17,22 @@ export const useAuthStore = create()(
       
       login: async (email, password) => {
         try {
-          // Get users from storage
-          const usersJson = await AsyncStorage.getItem('users');
-          const users = usersJson ? JSON.parse(usersJson) : [];
-          
-          // Find user with matching email and password
-          const user = users.find(u => u.email === email && u.password === password);
-          
-          if (user) {
-            set({ user, isAuthenticated: true });
-            return true;
-          }
-          return false;
+          // Sign in with Firebase
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          const { user } = userCredential;
+
+          // Store user data in state
+          const userData = {
+            uid: user.uid,
+            email: user.email,
+            name: user.displayName || ''
+          };
+
+          // Save user ID for Firestore operations
+          await AsyncStorage.setItem('userId', user.uid);
+
+          set({ user: userData, isAuthenticated: true });
+          return true;
         } catch (error) {
           console.error('Login error:', error);
           return false;
@@ -30,24 +41,24 @@ export const useAuthStore = create()(
       
       signup: async (name, email, password) => {
         try {
-          // Get existing users
-          const usersJson = await AsyncStorage.getItem('users');
-          const users = usersJson ? JSON.parse(usersJson) : [];
-          
-          // Check if user already exists
-          if (users.some(u => u.email === email)) {
-            return false;
-          }
-          
-          // Create new user
-          const newUser = { name, email, password };
-          
-          // Add to users array and save
-          users.push(newUser);
-          await AsyncStorage.setItem('users', JSON.stringify(users));
-          
-          // Update state
-          set({ user: newUser, isAuthenticated: true });
+          // Create user in Firebase
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const { user } = userCredential;
+
+          // Update profile with name
+          await updateProfile(user, { displayName: name });
+
+          // Store user data in state
+          const userData = {
+            uid: user.uid,
+            email: user.email,
+            name: name
+          };
+
+          // Save user ID for Firestore operations
+          await AsyncStorage.setItem('userId', user.uid);
+
+          set({ user: userData, isAuthenticated: true });
           return true;
         } catch (error) {
           console.error('Signup error:', error);
@@ -55,8 +66,14 @@ export const useAuthStore = create()(
         }
       },
       
-      logout: () => {
-        set({ user: null, isAuthenticated: false });
+      logout: async () => {
+        try {
+          await signOut(auth);
+          await AsyncStorage.removeItem('userId');
+          set({ user: null, isAuthenticated: false });
+        } catch (error) {
+          console.error('Logout error:', error);
+        }
       }
     }),
     {

@@ -1,9 +1,11 @@
 import { Stack } from "expo-router";
 import Colors from "../../constants/colors";
+import { UnderstandMeProvider } from "../UnderstandMeContext";
 
 export default function AppLayout() {
   return (
-    <Stack
+    <UnderstandMeProvider>
+      <Stack
       screenOptions={{
         headerStyle: {
           backgroundColor: Colors.background,
@@ -21,6 +23,7 @@ export default function AppLayout() {
           headerShown: false,
         }}
       />
-    </Stack>
+      </Stack>
+    </UnderstandMeProvider>
   );
 }
