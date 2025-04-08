@@ -1,28 +1,70 @@
 import { useRouter } from "expo-router";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useUnderstandMeContext } from "../../UnderstandMeContext.jsx";
+import { useEffect } from "react";
 import Colors from "../../../constants/colors";
 import SafeAreaWrapper from "../../../components/layouts/SafeAreaWrapper";
 import { Shield } from "lucide-react-native";
 
 export default function ModuleTwo() {
   const router = useRouter();
-  const { moduleTwoAnswers, setModuleTwoAnswers } = useUnderstandMeContext();
+  const { moduleTwoAnswers, setModuleTwoAnswers, setCurrentModule, moduleTwoQuestions, setModuleTwoQuestions } = useUnderstandMeContext();
 
-  const options = [
-    "Click the link immediately",
-    "Call the bank's official number",
-    "Ignore and delete the email",
-    "Forward to IT security team"
+  useEffect(() => {
+    // Enable screenshot prevention for this module
+    setCurrentModule("module-two");
+
+    // Cleanup when component unmounts
+    return () => {
+      setCurrentModule(null);
+    };
+  }, [setCurrentModule]);
+
+  const options = ["Never", "Rarely", "Sometimes", "Often", "Always"];
+  
+  const QUESTION_POOL = [
+    // Existing questions
+    "I tend to make quick decisions when browsing online.",
+    "I generally trust emails from familiar organizations without verifying their authenticity.",
+    "I prefer sticking to familiar websites rather than exploring new ones.",
+    "I find it easy to persuade others to see things from my perspective.",
+    "I often seek out new online experiences and platforms.",
+    // New questions
+    "I often act on emails that create a sense of urgency without verifying their authenticity.",
+    "I tend to trust messages from unknown senders if they appear professional.",
+    "I am more likely to engage with online offers that promise significant rewards with minimal effort.",
+    "I believe that most online threats are exaggerated and do not require much attention.",
+    "I prefer convenience over security when setting up online accounts or devices.",
+    "I rarely question the legitimacy of unexpected online communications.",
+    "I feel confident in my ability to identify scams without formal training.",
+    "I often share personal achievements or purchases on social media without considering privacy settings.",
+    "I believe that cybersecurity measures are more relevant for organizations than individuals.",
+    "I am comfortable using the same password across multiple online platforms for ease of access."
   ];
 
-  const handleAnswer = (option) => {
-    setModuleTwoAnswers({ ...moduleTwoAnswers, q1: option });
+  // Select random questions if not already selected
+  useEffect(() => {
+    if (moduleTwoQuestions.length === 0) {
+      const indices = [...Array(QUESTION_POOL.length).keys()];
+      const randomIndices = indices.sort(() => Math.random() - 0.5).slice(0, 5);
+      setModuleTwoQuestions(randomIndices.map(i => QUESTION_POOL[i]));
+    }
+  }, [moduleTwoQuestions, setModuleTwoQuestions]);
+
+  const handleAnswer = (questionIndex, option) => {
+    setModuleTwoAnswers({
+      ...moduleTwoAnswers,
+      [`q${questionIndex + 1}`]: option
+    });
   };
 
   const handleNext = () => {
     router.push("/app/understand-me/module-three");
   };
+
+  const allQuestionsAnswered = moduleTwoQuestions.every((_, index) =>
+    moduleTwoAnswers[`q${index + 1}`]
+  );
 
   return (
     <SafeAreaWrapper>
@@ -32,53 +74,49 @@ export default function ModuleTwo() {
             <View style={styles.logoContainer}>
               <Shield size={24} color={Colors.primary} />
             </View>
-            <Text style={styles.headerTitle}>Phishing Susceptibility</Text>
+            <Text style={styles.headerTitle}>Personality-Based Assessment</Text>
           </View>
         </View>
 
-        <View style={styles.questionCard}>
-          <Text style={styles.questionTitle}>Scenario 1</Text>
-          <Text style={styles.question}>
-            You receive an email claiming your bank account is compromised. What would you do?
-          </Text>
-          
-          <View style={styles.optionsContainer}>
-            {options.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.option,
-                  moduleTwoAnswers.q1 === option && styles.selectedOption
-                ]}
-                onPress={() => handleAnswer(option)}
-              >
-                <Text style={[
-                  styles.optionText,
-                  moduleTwoAnswers.q1 === option && styles.selectedOptionText
-                ]}>
-                  {option}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {moduleTwoQuestions.map((question, index) => (
+          <View key={index} style={styles.questionCard}>
+            <Text style={styles.questionTitle}>Question {index + 6}</Text>
+            <Text style={styles.question}>
+              {question}
+            </Text>
+            
+            <View style={styles.optionsContainer}>
+              {options.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.option,
+                    moduleTwoAnswers[`q${index + 1}`] === option && styles.selectedOption
+                  ]}
+                  onPress={() => handleAnswer(index, option)}
+                >
+                  <Text style={[
+                    styles.optionText,
+                    moduleTwoAnswers[`q${index + 1}`] === option && styles.selectedOptionText
+                  ]}>
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        ))}
 
-        <View style={styles.tipCard}>
-          <Text style={styles.tipTitle}>Security Tip</Text>
-          <Text style={styles.tipText}>
-            Financial institutions will never ask you to click on links in emails to verify your account. Always contact your bank through official channels.
-          </Text>
-        </View>
 
         <TouchableOpacity
           style={[
             styles.nextButton,
-            !moduleTwoAnswers.q1 && styles.disabledButton
+            !allQuestionsAnswered && styles.disabledButton
           ]}
           onPress={handleNext}
-          disabled={!moduleTwoAnswers.q1}
+          disabled={!allQuestionsAnswered}
         >
-          <Text style={styles.nextButtonText}>Next Scenario</Text>
+          <Text style={styles.nextButtonText}>Next Module</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaWrapper>
@@ -135,7 +173,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   question: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: "bold",
     color: Colors.text,
     marginBottom: 20,
@@ -163,25 +201,6 @@ const styles = StyleSheet.create({
   selectedOptionText: {
     color: Colors.white,
     fontWeight: '600',
-  },
-  tipCard: {
-    backgroundColor: Colors.lightGray,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
-  },
-  tipTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  tipText: {
-    fontSize: 14,
-    color: Colors.darkGray,
-    lineHeight: 20,
   },
   nextButton: {
     backgroundColor: Colors.primary,

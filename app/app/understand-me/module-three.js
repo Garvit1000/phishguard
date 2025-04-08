@@ -1,28 +1,70 @@
 import { useRouter } from "expo-router";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useUnderstandMeContext } from "../../UnderstandMeContext.jsx";
+import { useEffect } from "react";
 import Colors from "../../../constants/colors";
 import SafeAreaWrapper from "../../../components/layouts/SafeAreaWrapper";
 import { Shield } from "lucide-react-native";
 
 export default function ModuleThree() {
   const router = useRouter();
-  const { moduleThreeAnswers, setModuleThreeAnswers } = useUnderstandMeContext();
+  const { moduleThreeAnswers, setModuleThreeAnswers, setCurrentModule, moduleThreeQuestions, setModuleThreeQuestions } = useUnderstandMeContext();
 
-  const options = [
-    "Create a detailed plan and follow it",
-    "Work faster and longer hours",
-    "Seek help from colleagues",
-    "Push back on the deadline"
+  useEffect(() => {
+    // Enable screenshot prevention for this module
+    setCurrentModule("module-three");
+
+    // Cleanup when component unmounts
+    return () => {
+      setCurrentModule(null);
+    };
+  }, [setCurrentModule]);
+
+  const options = ["Never", "Rarely", "Sometimes", "Often", "Always"];
+  
+  const QUESTION_POOL = [
+    // Existing questions
+    "I scrutinize email addresses and URLs before clicking on them.",
+    "I double-check the legitimacy of unexpected email attachments.",
+    "I prefer tasks that require careful analysis over those that are straightforward.",
+    "I can easily detect inconsistencies in online information.",
+    "I question the motives behind unsolicited online requests or offers.",
+    // New questions
+    "I meticulously verify the authenticity of emails claiming to be from official organizations.",
+    "I cross-reference information from unsolicited messages with official sources before taking action.",
+    "I pay attention to subtle discrepancies in email addresses or domain names.",
+    "I am cautious about downloading attachments from unknown or unexpected emails.",
+    "I recognize that legitimate organizations will not request sensitive information via unsecured channels.",
+    "I am aware of the common tactics used in phishing scams, such as creating a sense of urgency.",
+    "I regularly update and patch my devices to protect against known vulnerabilities.",
+    "I understand the importance of using multi-factor authentication for online accounts.",
+    "I can identify signs of secure websites, such as HTTPS and valid security certificates.",
+    "I am skeptical of unsolicited messages that request immediate action or personal information."
   ];
 
-  const handleAnswer = (option) => {
-    setModuleThreeAnswers({ ...moduleThreeAnswers, q1: option });
+  // Select random questions if not already selected
+  useEffect(() => {
+    if (moduleThreeQuestions.length === 0) {
+      const indices = [...Array(QUESTION_POOL.length).keys()];
+      const randomIndices = indices.sort(() => Math.random() - 0.5).slice(0, 5);
+      setModuleThreeQuestions(randomIndices.map(i => QUESTION_POOL[i]));
+    }
+  }, [moduleThreeQuestions, setModuleThreeQuestions]);
+
+  const handleAnswer = (questionIndex, option) => {
+    setModuleThreeAnswers({
+      ...moduleThreeAnswers,
+      [`q${questionIndex + 1}`]: option
+    });
   };
 
   const handleNext = () => {
-    router.push("/app/understand-me/results");
+    router.push("/app/understand-me/module-four");
   };
+
+  const allQuestionsAnswered = moduleThreeQuestions.every((_, index) =>
+    moduleThreeAnswers[`q${index + 1}`]
+  );
 
   return (
     <SafeAreaWrapper>
@@ -32,53 +74,49 @@ export default function ModuleThree() {
             <View style={styles.logoContainer}>
               <Shield size={24} color={Colors.primary} />
             </View>
-            <Text style={styles.headerTitle}>Behavioral Assessment</Text>
+            <Text style={styles.headerTitle}>Cognitive Pattern Assessment</Text>
           </View>
         </View>
 
-        <View style={styles.questionCard}>
-          <Text style={styles.questionTitle}>Work Scenario</Text>
-          <Text style={styles.question}>
-            When faced with a tight deadline, what's your typical response?
-          </Text>
-          
-          <View style={styles.optionsContainer}>
-            {options.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.option,
-                  moduleThreeAnswers.q1 === option && styles.selectedOption
-                ]}
-                onPress={() => handleAnswer(option)}
-              >
-                <Text style={[
-                  styles.optionText,
-                  moduleThreeAnswers.q1 === option && styles.selectedOptionText
-                ]}>
-                  {option}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {moduleThreeQuestions.map((question, index) => (
+          <View key={index} style={styles.questionCard}>
+            <Text style={styles.questionTitle}>Question {index + 11}</Text>
+            <Text style={styles.question}>
+              {question}
+            </Text>
+            
+            <View style={styles.optionsContainer}>
+              {options.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.option,
+                    moduleThreeAnswers[`q${index + 1}`] === option && styles.selectedOption
+                  ]}
+                  onPress={() => handleAnswer(index, option)}
+                >
+                  <Text style={[
+                    styles.optionText,
+                    moduleThreeAnswers[`q${index + 1}`] === option && styles.selectedOptionText
+                  ]}>
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        ))}
 
-        <View style={styles.tipCard}>
-          <Text style={styles.tipTitle}>Why This Matters</Text>
-          <Text style={styles.tipText}>
-            Your response to pressure can indicate how you might react to urgent phishing attempts that create artificial time pressure to make you act quickly.
-          </Text>
-        </View>
 
         <TouchableOpacity
           style={[
             styles.nextButton,
-            !moduleThreeAnswers.q1 && styles.disabledButton
+            !allQuestionsAnswered && styles.disabledButton
           ]}
           onPress={handleNext}
-          disabled={!moduleThreeAnswers.q1}
+          disabled={!allQuestionsAnswered}
         >
-          <Text style={styles.nextButtonText}>View Results</Text>
+          <Text style={styles.nextButtonText}>Next Module</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaWrapper>
@@ -135,7 +173,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   question: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: "bold",
     color: Colors.text,
     marginBottom: 20,
@@ -163,25 +201,6 @@ const styles = StyleSheet.create({
   selectedOptionText: {
     color: Colors.white,
     fontWeight: '600',
-  },
-  tipCard: {
-    backgroundColor: Colors.lightGray,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
-  },
-  tipTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  tipText: {
-    fontSize: 14,
-    color: Colors.darkGray,
-    lineHeight: 20,
   },
   nextButton: {
     backgroundColor: Colors.primary,
