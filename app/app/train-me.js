@@ -32,27 +32,49 @@ export default function TrainMeScreen() {
     while (generatedExamples.length < totalExamples && retries < maxRetries) {
       try {
         console.log(`Generating example ${generatedExamples.length + 1}/${totalExamples}`);
-        // Calculate skill level and focus areas based on test scores
+        
         let skillLevel = 'basic';
-        if (testResults.scores.phishing > 90) {
+        const reportScore = testResults.scores.Report;
+        if (reportScore > 90) {
           skillLevel = 'expert';
-        } else if (testResults.scores.phishing > 75) {
+        } else if (reportScore > 75) {
           skillLevel = 'advanced';
-        } else if (testResults.scores.phishing > 50) {
+        } else if (reportScore > 50) {
           skillLevel = 'intermediate';
         }
 
-        // Analyze weak areas from test results
         const weakAreas = [];
-        if (testResults.scores.financial < 70) weakAreas.push('financial');
-        if (testResults.scores.impersonation < 70) weakAreas.push('impersonation');
-        if (testResults.scores.malware < 70) weakAreas.push('malware');
-        if (testResults.scores.social < 70) weakAreas.push('social');
-        if (testResults.scores.credential < 70) weakAreas.push('credential');
+        const threshold = 70;
+        
+        if (testResults.scores.Report < threshold) {
+          weakAreas.push('financial');
+          weakAreas.push('social');
+        }
+        if (testResults.scores.Behavior < threshold) {
+          weakAreas.push('impersonation');
+          weakAreas.push('social');
+        }
+        if (testResults.scores.Cognition < threshold) {
+          weakAreas.push('credential');
+          weakAreas.push('malware');
+        }
+        if (testResults.scores.Risk < threshold) {
+          weakAreas.push('malware');
+          weakAreas.push('credential');
+        }
+
+        const mappedScores = {
+          phishing: testResults.scores.Report,
+          financial: testResults.scores.Behavior,
+          impersonation: testResults.scores.Cognition,
+          malware: testResults.scores.Risk,
+          social: Math.round((testResults.scores.Report + testResults.scores.Behavior) / 2),
+          credential: Math.round((testResults.scores.Cognition + testResults.scores.Risk) / 2)
+        };
 
         const exampleResponse = await geminiTraining.generateTrainingExample(skillLevel, {
-          weakAreas,
-          testScores: testResults.scores,
+          weakAreas: [...new Set(weakAreas)],
+          testScores: mappedScores,
           previousAnswers: {
             moduleOne: moduleOneAnswers,
             moduleTwo: moduleTwoAnswers,
@@ -79,7 +101,7 @@ export default function TrainMeScreen() {
       } catch (error) {
         console.error('Example generation failed:', error);
         retries++;
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
@@ -94,24 +116,25 @@ export default function TrainMeScreen() {
     try {
       setLoading(true);
       
+      // Simple check for user ID
       if (!user?.uid) {
-        throw new Error('Please log in to access training');
+        router.replace("/auth/login");
+        return;
       }
-
-      console.log('Fetching test results...');
-      const testResults = await FirebaseService.getTestResults(user.uid);
       
-      if (!testResults) {
+      const testResults = await FirebaseService.getTestResults(user.uid);
+      if (!testResults?.scores) {
         throw new Error('Please complete the understand-me test first');
       }
 
-      console.log('Generating examples...');
       const newExamples = await generateTrainingExamples(testResults);
-      console.log(`Generated ${newExamples.length} examples`);
-      
-      setExamples(newExamples);
-      setCurrentExample(0);
-      setScore({ correct: 0, total: 0 });
+      if (newExamples.length > 0) {
+        setExamples(newExamples);
+        setCurrentExample(0);
+        setScore({ correct: 0, total: 0 });
+      } else {
+        throw new Error('Could not generate training examples');
+      }
     } catch (error) {
       console.error('Failed to load examples:', error);
       Alert.alert(
@@ -159,8 +182,18 @@ export default function TrainMeScreen() {
       setSelectedAnswer(null);
       setShowExplanation(false);
     } else {
-      // Directly navigate to home page when training is complete
-      router.replace("/app/landing");
+      Alert.alert(
+        "Training Complete",
+        "Great job! You've completed this training session.",
+        [
+          {
+            text: "Finish",
+            onPress: () => {
+              router.replace("/app/landing");
+            }
+          }
+        ]
+      );
     }
   };
 
@@ -257,34 +290,46 @@ export default function TrainMeScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.explanationContainer}>
-            <View style={[
-              styles.resultBanner,
-              selectedAnswer === example.isScam ? styles.correctBanner : styles.incorrectBanner
-            ]}>
-              {selectedAnswer === example.isScam ? (
-                <View style={styles.resultContent}>
-                  <CheckCircle size={20} color={Colors.success} />
-                  <Text style={styles.resultText}>Correct!</Text>
-                </View>
+          <View style={styles.explanationWrapper}>
+            <ScrollView style={styles.explanationScroll}>
+              <View style={[
+                styles.resultBanner,
+                selectedAnswer === example.isScam ? styles.correctBanner : styles.incorrectBanner
+              ]}>
+                {selectedAnswer === example.isScam ? (
+                  <View style={styles.resultContent}>
+                    <CheckCircle size={20} color={Colors.success} />
+                    <Text style={styles.resultText}>Correct!</Text>
+                  </View>
+                ) : (
+                  <View style={styles.resultContent}>
+                    <XCircle size={20} color={Colors.error} />
+                    <Text style={styles.resultText}>Incorrect</Text>
+                  </View>
+                )}
+              </View>
+              
+              <Text style={styles.explanationTitle}>
+                {example.isScam ? 'This is a security threat' : 'This is legitimate'}
+              </Text>
+              <Text style={styles.explanationText}>{example.reason}</Text>
+            </ScrollView>
+            
+            <View style={styles.buttonContainer}>
+              {currentExample < examples.length - 1 ? (
+                <Button
+                  title="Next Example"
+                  onPress={nextExample}
+                  style={styles.nextButton}
+                />
               ) : (
-                <View style={styles.resultContent}>
-                  <XCircle size={20} color={Colors.error} />
-                  <Text style={styles.resultText}>Incorrect</Text>
-                </View>
+                <Button
+                  title="Finish Training"
+                  onPress={nextExample}
+                  style={[styles.nextButton, styles.finishButton]}
+                />
               )}
             </View>
-            
-            <Text style={styles.explanationTitle}>
-              {example.isScam ? 'This is a security threat' : 'This is legitimate'}
-            </Text>
-            <Text style={styles.explanationText}>{example.reason}</Text>
-            
-            <Button
-              title={currentExample < examples.length - 1 ? "Next Example" : "Finish Training"}
-              onPress={nextExample}
-              style={styles.nextButton}
-            />
           </View>
         )}
       </View>
@@ -414,15 +459,16 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginLeft: 8,
   },
-  explanationContainer: {
+  explanationWrapper: {
     backgroundColor: Colors.card,
     borderRadius: 12,
-    padding: 16,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: Colors.border,
-    maxHeight: '45%',  // Limit height to ensure button is visible
-    overflow: 'scroll' // Make content scrollable if it overflows
+    maxHeight: '45%',
+  },
+  explanationScroll: {
+    padding: 16,
   },
   resultBanner: {
     padding: 10,
@@ -456,7 +502,16 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 16,
   },
+  buttonContainer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.card,
+  },
   nextButton: {
-    marginTop: 8,
+    marginVertical: 8,
+  },
+  finishButton: {
+    backgroundColor: Colors.success,
   },
 });

@@ -29,29 +29,29 @@ class PDFGenerationService {
             }
             .score-card {
               background: #f5f5f5;
-              padding: 15px;
+              padding: 12px;
               border-radius: 8px;
-              margin-bottom: 20px;
+              margin-bottom: 12px;
             }
             .score-item {
               display: flex;
               justify-content: space-between;
-              margin: 10px 0;
-              padding: 10px;
+              margin: 8px 0;
+              padding: 8px;
               background: white;
               border-radius: 4px;
             }
             .assessment {
               border-left: 4px solid ${assessment.color};
-              padding: 15px;
+              padding: 12px;
               background: #f9f9f9;
-              margin: 20px 0;
+              margin: 15px 0;
             }
             .section-title {
               color: ${Colors.primary};
               font-size: 18px;
               font-weight: bold;
-              margin: 20px 0 10px 0;
+              margin: 15px 0 8px 0;
             }
             .chart-container {
               margin: 20px 0;
@@ -84,10 +84,10 @@ class PDFGenerationService {
 
           <div class="section-title">Analysis Breakdown</div>
           <div class="score-card">
-            <p><strong>Rapport Building (${Math.round(moduleScores['Rapport Building'])}%):</strong> Measures your ability to identify and maintain secure communication practices.</p>
-            <p><strong>Personality (${Math.round(moduleScores['Personality'])}%):</strong> Evaluates your natural tendencies in handling security-related situations.</p>
-            <p><strong>Cognitive Pattern (${Math.round(moduleScores['Cognitive Pattern'])}%):</strong> Assesses your analytical approach to potential security threats.</p>
-            <p><strong>Risk Assessment (${Math.round(moduleScores['Risk Assessment'])}%):</strong> Examines your risk awareness and decision-making in security contexts.</p>
+            <p style="margin: 6px 0"><strong>Report (${Math.round(moduleScores['Report'])}%):</strong> Measures your ability to identify and report potential security threats accurately.</p>
+            <p style="margin: 6px 0"><strong>Behavior (${Math.round(moduleScores['Behavior'])}%):</strong> Evaluates your actions and responses in security-critical situations.</p>
+            <p style="margin: 6px 0"><strong>Cognition (${Math.round(moduleScores['Cognition'])}%):</strong> Assesses your analytical thinking and decision-making in security contexts.</p>
+            <p style="margin: 6px 0"><strong>Risk (${Math.round(moduleScores['Risk'])}%):</strong> Examines your understanding and management of security risks.</p>
           </div>
 
           <div class="section-title">Recommendations</div>
@@ -109,24 +109,24 @@ class PDFGenerationService {
   generateRecommendations(scores) {
     let recommendations = [];
 
-    if (scores['Rapport Building'] < 64) {
-      recommendations.push('Focus on developing stronger security communication practices and awareness of social engineering tactics.');
+    if (scores['Report'] < 64) {
+      recommendations.push('Enhance your ability to identify and report potential security threats accurately.');
     }
-    if (scores['Personality'] < 64) {
-      recommendations.push('Work on building more security-conscious habits and responses to potential threats.');
+    if (scores['Behavior'] < 64) {
+      recommendations.push('Work on developing more security-conscious behaviors and responses to threats.');
     }
-    if (scores['Cognitive Pattern'] < 64) {
-      recommendations.push('Enhance your analytical skills in identifying and evaluating security risks.');
+    if (scores['Cognition'] < 64) {
+      recommendations.push('Focus on improving your analytical thinking and security decision-making skills.');
     }
-    if (scores['Risk Assessment'] < 64) {
-      recommendations.push('Improve your understanding of security risks and develop more cautious decision-making processes.');
+    if (scores['Risk'] < 64) {
+      recommendations.push('Strengthen your understanding of security risks and develop better risk management practices.');
     }
 
     if (recommendations.length === 0) {
       recommendations.push('Maintain your excellent security awareness and continue staying updated on latest security practices.');
     }
 
-    return recommendations.map(rec => `<p>• ${rec}</p>`).join('');
+    return recommendations.map(rec => `<p style="margin: 6px 0">• ${rec}</p>`).join('');
   }
 
   async generatePDF(data) {

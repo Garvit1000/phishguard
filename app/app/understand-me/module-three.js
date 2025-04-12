@@ -154,17 +154,11 @@ const styles = StyleSheet.create({
   },
   questionCard: {
     backgroundColor: Colors.white,
-    borderRadius: 16,
+    borderRadius: 24,
     padding: 20,
     marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   questionTitle: {
     fontSize: 16,

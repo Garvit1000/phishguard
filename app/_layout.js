@@ -1,8 +1,9 @@
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
-import { useAuthStore } from "../stores/auth-store";
+import { useEffect, useState } from "react";
+import { View, ActivityIndicator } from "react-native";
+import { useAuthStore } from "@/stores/auth-store";
 import { ErrorBoundary } from "./error-boundry";
 import { ScreenshotPreventionProvider } from "./ScreenshotPreventionContext";
 
@@ -28,7 +29,11 @@ export default function RootLayout() {
   }, [loaded]);
 
   if (!loaded) {
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
   }
 
   return (
@@ -43,101 +48,35 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, initAuth } = useAuthStore();
+  const [authLoaded, setAuthLoaded] = useState(false);
 
-  // Move the navigation logic to useEffect to prevent state updates on unmounted components
+  // Set up auth state listener
   useEffect(() => {
-    // Check if the user is authenticated
+    console.log('Setting up auth listener...');
+    const unsubscribe = initAuth();
+    setAuthLoaded(true);
+
+    return () => {
+      if (unsubscribe && typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+  // Handle navigation based on auth state
+  useEffect(() => {
+    if (!authLoaded) return;
+
     const inAuthGroup = segments[0] === "auth";
+    console.log('Auth state:', isAuthenticated ? 'authenticated' : 'not authenticated');
     
     if (!isAuthenticated && !inAuthGroup) {
-      // Redirect to the login page if not authenticated
       router.replace("/auth/login");
     } else if (isAuthenticated && inAuthGroup) {
-      // Redirect to the main app if authenticated
       router.replace("/app/landing");
     }
-  }, [isAuthenticated, segments, router]);
-
-  return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-      }}
-      initialRouteName="auth"
-    >
-      <Stack.Screen
-        name="auth"
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="app"
-        options={{
-          headerShown: false,
-        }}
-      />
-    </Stack>
-  );
-}
-import { useFonts } from "expo-font";
-import { Stack, useRouter, useSegments } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
-import { useAuthStore } from "../stores/auth-store";
-import { ErrorBoundary } from "./error-boundry";
-
-// Prevent the splash screen from auto-hiding
-SplashScreen.preventAutoHideAsync();
-
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    // You can add custom fonts here if needed
-  });
-
-  useEffect(() => {
-    if (error) {
-      console.error(error);
-      throw error;
-    }
-  }, [error]);
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
-  return (
-    <ErrorBoundary>
-      <RootLayoutNav />
-    </ErrorBoundary>
-  );
-}
-
-function RootLayoutNav() {
-  const segments = useSegments();
-  const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
-
-  // Move the navigation logic to useEffect to prevent state updates on unmounted components
-  useEffect(() => {
-    // Check if the user is authenticated
-    const inAuthGroup = segments[0] === "auth";
-    
-    if (!isAuthenticated && !inAuthGroup) {
-      // Redirect to the login page if not authenticated
-      router.replace("/auth/login");
-    } else if (isAuthenticated && inAuthGroup) {
-      // Redirect to the main app if authenticated
-      router.replace("/app/landing");
-    }
-  }, [isAuthenticated, segments, router]);
+  }, [isAuthenticated, segments, router, authLoaded]);
 
   return (
     <Stack

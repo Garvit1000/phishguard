@@ -12,7 +12,7 @@ export default function ModuleFour() {
 
   useEffect(() => {
     // Enable screenshot prevention for this module
-    setCurrentModule("module-four");
+    setCurrentModule("Risk Assesment");
 
     // Cleanup when component unmounts
     return () => {
@@ -74,7 +74,7 @@ export default function ModuleFour() {
             <View style={styles.logoContainer}>
               <Shield size={24} color={Colors.primary} />
             </View>
-            <Text style={styles.headerTitle}>Risk-Taking Assessment</Text>
+            <Text style={styles.headerTitle}>Risk Analysis</Text>
           </View>
         </View>
 
@@ -153,18 +153,12 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   questionCard: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.background,
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   questionTitle: {
     fontSize: 16,

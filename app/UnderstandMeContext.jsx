@@ -1,7 +1,17 @@
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, { createContext, useState, useContext, useEffect, useCallback } from "react";
 import { useScreenshotPrevention } from "./ScreenshotPreventionContext";
+import { Alert } from "react-native";
 
 const UnderstandMeContext = createContext();
+
+// Debounce helper
+const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
 
 // List of routes where screenshot prevention should be enabled
 const PROTECTED_ROUTES = [
@@ -24,20 +34,55 @@ function UnderstandMeProvider({ children }) {
   
   const { enablePrevention, disablePrevention } = useScreenshotPrevention();
 
+  // Debounced module state updater
+  const debouncedSetCurrentModule = useCallback(
+    debounce((module) => {
+      setCurrentModule(module);
+    }, 300),
+    []
+  );
+
   // Enable/disable screenshot prevention based on current module
   useEffect(() => {
-    if (PROTECTED_ROUTES.includes(currentModule)) {
-      enablePrevention();
-      console.log(`Screenshot prevention enabled for module: ${currentModule}`);
-    } else {
-      disablePrevention();
-      console.log('Screenshot prevention disabled');
-    }
+    let isMounted = true;
+    
+    const updatePrevention = async () => {
+      try {
+        if (PROTECTED_ROUTES.includes(currentModule)) {
+          await enablePrevention(currentModule);
+        } else if (currentModule === null) {
+          // Only disable if explicitly set to null (not during transitions)
+          await disablePrevention(currentModule);
+        }
+      } catch (error) {
+        console.error('Failed to update screenshot prevention:', error);
+        if (isMounted) {
+          Alert.alert(
+            'Security Notice',
+            'Unable to enable security features. Please restart the application.'
+          );
+        }
+      }
+    };
+
+    updatePrevention();
 
     return () => {
-      disablePrevention();
+      isMounted = false;
+      // Don't disable prevention in cleanup unless component is unmounting
+      if (!PROTECTED_ROUTES.includes(currentModule)) {
+        disablePrevention(currentModule);
+      }
     };
   }, [currentModule, enablePrevention, disablePrevention]);
+
+  const safeSetCurrentModule = useCallback((module) => {
+    if (PROTECTED_ROUTES.includes(module) || module === null) {
+      debouncedSetCurrentModule(module);
+    } else {
+      setCurrentModule(module);
+    }
+  }, [debouncedSetCurrentModule]);
 
   return (
     <UnderstandMeContext.Provider
@@ -51,7 +96,7 @@ function UnderstandMeProvider({ children }) {
         moduleFourAnswers,
         setModuleFourAnswers,
         currentModule,
-        setCurrentModule,
+        setCurrentModule: safeSetCurrentModule,
         moduleOneQuestions,
         setModuleOneQuestions,
         moduleTwoQuestions,

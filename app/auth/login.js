@@ -65,7 +65,7 @@ export default function LoginScreen() {
             <View style={styles.logoContainer}>
               <Shield size={40} color={Colors.primary} />
             </View>
-            <Text style={styles.title}>PhishGuard</Text>
+            <Text style={styles.title}>CyberKavach</Text>
             <Text style={styles.subtitle}>Your protection against phishing attacks</Text>
           </View>
           

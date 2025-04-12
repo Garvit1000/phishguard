@@ -1,5 +1,5 @@
 {
-  "name": "expo-app",
+  "name": "cyber-kavach",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
@@ -20,7 +20,7 @@
     "@react-native-voice/voice": "^3.2.4",
     "@react-navigation/native": "^7.0.0",
     "babel-plugin-module-resolver": "^5.0.2",
-    "expo": "^52.0.42",
+    "expo": "^52.0.44",
     "expo-av": "^15.0.2",
     "expo-blur": "~14.0.1",
     "expo-constants": "~17.0.8",

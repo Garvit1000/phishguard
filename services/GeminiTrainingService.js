@@ -97,16 +97,16 @@ Requirements:
 3. Include subtle security indicators that match their expertise
 4. Provide detailed educational value in the reason field
 
-Return a JSON object with exactly these fields:
+IMPORTANT: Your response must be a valid JSON object with exactly these fields:
 {
-  "sender": "Email sender address",
-  "subject": "Email subject line",
-  "content": "Detailed email content",
-  "isScam": true/false,
-  "reason": "Educational explanation of security indicators"
+  "sender": "Email sender address (string)",
+  "subject": "Email subject line (string)",
+  "content": "Detailed email content (string)",
+  "isScam": true/false (boolean),
+  "reason": "Educational explanation of security indicators (string)"
 }
 
-Make the example challenging but appropriate for their skill level.`;
+Do not include any text before or after the JSON object. Do not use markdown formatting or code blocks.`;
 
     try {
       console.log('Sending request to Gemini...');
@@ -126,14 +126,39 @@ Make the example challenging but appropriate for their skill level.`;
     try {
       console.log('Parsing response...');
       
-      // Find JSON object
-      const matches = textResponse.match(/\{[\s\S]*\}/g);
-      if (!matches || matches.length === 0) {
-        throw new Error('No JSON found in response');
+      // Clean the response text first
+      let cleanText = textResponse
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
+
+      // Try to find JSON object using multiple methods
+      let jsonStr = null;
+      
+      // Method 1: Look for JSON object in the text
+      const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonStr = jsonMatch[0];
+      } else {
+        // Method 2: Try to extract key-value pairs
+        const keyValuePairs = cleanText.match(/"([^"]+)":\s*"([^"]+)"/g);
+        if (keyValuePairs) {
+          const obj = {};
+          keyValuePairs.forEach(pair => {
+            const [key, value] = pair.split(':').map(s => s.trim().replace(/"/g, ''));
+            obj[key] = value;
+          });
+          jsonStr = JSON.stringify(obj);
+        }
+      }
+
+      if (!jsonStr) {
+        console.error('Could not find valid JSON in response:', cleanText);
+        throw new Error('Invalid response format');
       }
 
       // Clean the JSON string
-      let cleanResponse = matches[0]
+      jsonStr = jsonStr
         .replace(/[\n\r]/g, ' ')
         .replace(/\s+/g, ' ')
         .replace(/,\s*}/g, '}')
@@ -144,29 +169,51 @@ Make the example challenging but appropriate for their skill level.`;
         .trim();
 
       // Parse and validate
-      const parsed = JSON.parse(cleanResponse);
+      const parsed = JSON.parse(jsonStr);
       
-      // Ensure all required fields exist
-      const required = ['sender', 'subject', 'content', 'isScam', 'reason'];
-      for (const field of required) {
-        if (!parsed[field]) {
+      // Ensure all required fields exist with proper types
+      const required = {
+        sender: 'string',
+        subject: 'string',
+        content: 'string',
+        isScam: 'boolean',
+        reason: 'string'
+      };
+
+      for (const [field, type] of Object.entries(required)) {
+        if (!(field in parsed)) {
           throw new Error(`Missing required field: ${field}`);
+        }
+        if (type === 'boolean' && typeof parsed[field] !== 'boolean') {
+          parsed[field] = parsed[field].toString().toLowerCase() === 'true';
+        }
+        if (type === 'string' && typeof parsed[field] !== 'string') {
+          parsed[field] = String(parsed[field]);
         }
       }
 
       const result = {
-        sender: String(parsed.sender),
-        subject: String(parsed.subject),
-        content: String(parsed.content),
-        isScam: Boolean(parsed.isScam),
-        reason: String(parsed.reason)
+        sender: parsed.sender,
+        subject: parsed.subject,
+        content: parsed.content,
+        isScam: parsed.isScam,
+        reason: parsed.reason
       };
 
-      console.log('Parsed result:', result);
+      console.log('Successfully parsed result:', result);
       return result;
     } catch (error) {
       console.error('Parse error:', error);
-      throw new Error('Failed to parse response');
+      console.error('Original response:', textResponse);
+      
+      // Return a fallback example if parsing fails
+      return {
+        sender: "security@example.com",
+        subject: "Important Security Update",
+        content: "This is a legitimate security update. Please review the attached document for important security information.",
+        isScam: false,
+        reason: "This is a fallback example generated due to parsing error. The original response could not be parsed."
+      };
     }
   }
 }
