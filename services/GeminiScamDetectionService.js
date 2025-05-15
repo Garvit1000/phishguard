@@ -384,51 +384,97 @@ Do not include any text before or after the JSON object. Do not use markdown bac
   // Helper function to sanitize and parse responses from Gemini
   parseResponse(textResponse, type) {
     try {
-      // Clean up the response text
+      // Detailed logging of original response
+      console.log('Parsing response for type:', type);
+      console.log('Original response:', JSON.stringify(textResponse));
+      
+      // Initial cleanup
       let cleanResponse = textResponse.trim();
       
-      // Remove markdown code blocks if present
+      // Log pre-cleanup state
+      console.log('Pre-cleanup response:', cleanResponse);
+      
+      // Handle markdown code blocks more specifically
       if (cleanResponse.startsWith('```json')) {
-        cleanResponse = cleanResponse.substring(7);
-      } else if (cleanResponse.startsWith('```')) {
-        cleanResponse = cleanResponse.substring(3);
-      }
-      if (cleanResponse.endsWith('```')) {
-        cleanResponse = cleanResponse.substring(0, cleanResponse.length - 3);
-      }
-      
-      // Remove any non-JSON characters that might appear before or after the JSON object
-      const jsonStartIndex = cleanResponse.indexOf('{');
-      const jsonEndIndex = cleanResponse.lastIndexOf('}') + 1;
-      
-      if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
-        cleanResponse = cleanResponse.substring(jsonStartIndex, jsonEndIndex);
+        console.log('Detected JSON code block');
+        cleanResponse = cleanResponse
+          .replace(/^```json\n/, '')  // Remove opening ```json
+          .replace(/\n```$/, '')      // Remove closing ```
+          .trim();
+      } else if (cleanResponse.includes('```')) {
+        console.log('Detected generic code block');
+        cleanResponse = cleanResponse
+          .replace(/```/g, '')        // Remove all code block markers
+          .trim();
       }
       
-      // Replace any escaped characters that might cause issues
+      // Log post-cleanup state
+      console.log('Post-cleanup response:', cleanResponse);
+      
+      // Try to extract valid JSON
+      const jsonMatch = cleanResponse.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+      if (jsonMatch) {
+        console.log('Found JSON match');
+        cleanResponse = jsonMatch[1];
+      } else {
+        console.warn('No valid JSON structure found in response');
+      }
+      
+      // Enhanced character cleanup with logging
+      console.log('Starting character cleanup');
       cleanResponse = cleanResponse
-        .replace(/[\u0000-\u0019]+/g, '') // Remove control characters
-        .replace(/\\"/g, '"')             // Fix escaped quotes
-        .replace(/\\n/g, ' ')             // Replace newlines with spaces
-        .replace(/\\/g, '\\\\');          // Escape backslashes
+        .replace(/[\u0000-\u0019]+/g, '')   // Remove control characters
+        .replace(/\\"/g, '"')               // Fix escaped quotes
+        .replace(/\\n/g, ' ')               // Replace newlines with spaces
+        .replace(/\\/g, '\\\\')             // Escape backslashes
+        .replace(/,(\s*[}\]])/g, '$1')      // Remove trailing commas
+        .replace(/([{,])\s*(\w+)\s*:/g, '$1"$2":')  // Quote unquoted keys
+        .replace(/:\s*'([^']*)'/g, ':"$1"') // Convert single quotes to double
+        .replace(/\s+/g, ' ');              // Normalize whitespace
       
       cleanResponse = cleanResponse.trim();
       
       console.log('Original response:', textResponse);
       console.log('Cleaned response:', cleanResponse);
       
-      // Attempt to parse the sanitized JSON response
+      // Attempt to parse with detailed error handling
       try {
-        return JSON.parse(cleanResponse);
+        console.log('Attempting to parse JSON:', cleanResponse);
+        const parsedResponse = JSON.parse(cleanResponse);
+        console.log('Successfully parsed response');
+        return parsedResponse;
       } catch (innerError) {
-        console.error('Inner parse error:', innerError);
-        // If parsing fails, try to fix common JSON syntax issues
-        cleanResponse = cleanResponse
-          .replace(/,\s*}/g, '}')         // Remove trailing commas
-          .replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3'); // Quote unquoted keys
+        console.error('JSON parse error:', innerError.message);
+        console.error('Failed to parse cleaned response:', cleanResponse);
         
-        console.log('Final attempt response:', cleanResponse);
-        return JSON.parse(cleanResponse);
+        // Enhanced fallback parsing
+        try {
+          // Extract key fields with more flexible regex
+          const isScamMatch = cleanResponse.match(/"isScam"\s*:\s*(true|false)/i);
+          const reasonMatch = cleanResponse.match(/"reason"\s*:\s*"([^"]+)"/i);
+          const confidenceMatch = cleanResponse.match(/"confidence"\s*:\s*([\d.]+)/);
+          
+          const fallbackResponse = {
+            isScam: isScamMatch ? isScamMatch[1].toLowerCase() === 'true' : false,
+            reason: reasonMatch ? reasonMatch[1] : 'Unable to extract detailed analysis',
+            confidence: confidenceMatch ? parseFloat(confidenceMatch[1]) : 0.5,
+            parseFailed: true,
+            parseError: innerError.message,
+            originalResponse: textResponse.substring(0, 100) + '...' // First 100 chars for debugging
+          };
+          
+          console.log('Created fallback response:', fallbackResponse);
+          return fallbackResponse;
+        } catch (fallbackError) {
+          console.error('Fallback parsing failed:', fallbackError);
+          return {
+            isScam: false,
+            reason: 'Failed to analyze content due to parsing errors',
+            confidence: 0,
+            parseFailed: true,
+            criticalError: true
+          };
+        }
       }
     } catch (parseError) {
       console.error(`Failed to parse Gemini ${type} response as JSON:`, parseError);
